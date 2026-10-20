@@ -1,0 +1,341 @@
+<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<title>Automated Dungeon Crawler — Prototype</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#15121c;color:#ddd;font:14px/1.35 system-ui,sans-serif}
+#app{max-width:480px;margin:auto;min-height:100vh;display:flex;flex-direction:column}
+header{display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:#221c2c;position:sticky;top:0;z-index:2}
+header b{color:#ffd75e}.pill{background:#332a40;border-radius:10px;padding:2px 8px;margin-left:4px;font-size:12px}
+nav{display:flex;background:#1c1724}nav button{flex:1;padding:9px 0;background:none;border:0;color:#aaa;font-weight:600;border-bottom:2px solid transparent}
+nav button.on{color:#fff;border-color:#ffd75e}
+.sec{padding:10px}.card{background:#211b2a;border-radius:8px;padding:10px;margin-bottom:10px}
+h3{margin:0 0 6px;font-size:14px;color:#ffd75e}
+.row{display:flex;align-items:center;justify-content:space-between;gap:6px;margin:4px 0}
+button.b{background:#3d3150;color:#fff;border:0;border-radius:6px;padding:7px 10px;font-weight:600}
+button.b:disabled{opacity:.35}button.go{background:#c58a1a;width:100%;padding:12px;font-size:16px}
+.sm{font-size:12px;color:#999}select,input{background:#2c2438;color:#ddd;border:1px solid #444;border-radius:5px;padding:4px}
+canvas{width:100%;display:block;border-radius:8px;background:#000}
+.bar{height:14px;background:#333;border-radius:7px;overflow:hidden;position:relative;margin:3px 0}
+.bar>i{display:block;height:100%}.bar>span{position:absolute;inset:0;font-size:11px;text-align:center;line-height:14px;color:#fff}
+#log{height:170px;overflow:auto;background:#0e0c12;border-radius:8px;padding:6px;font-size:12px}
+.pot{display:inline-block;width:22px;height:22px;border-radius:50%;border:2px solid #844;margin-right:4px}.pot.f{background:#d33}
+.item{display:flex;justify-content:space-between;align-items:center;border-left:4px solid;padding:4px 6px;margin:3px 0;background:#1a1522;border-radius:4px}
+.item .n{font-weight:600}.speed button{padding:5px 9px}.speed button.on{background:#c58a1a}
+.heir{border:1px solid #444;border-radius:8px;padding:8px;margin:6px 0}.heir.on{border-color:#ffd75e}
+</style></head><body><div id="app">
+<header><div><b>ADC</b> <span class="sm">prototype</span></div><div><span class="pill" id="hGen"></span><span class="pill" id="hGold"></span><span class="pill" id="hBest"></span></div></header>
+<nav id="nav"><button data-t="setup">Setup</button><button data-t="gear">Gear</button><button data-t="run">Run</button><button data-t="lineage">Lineage</button></nav>
+<div id="main"></div></div>
+<script>const ITEMS=[{"n": "Roadworn Hood", "set": "Roadworn (rogue starter)", "slot": "Helmet", "r": "common", "s": {"agi": 2}, "e": "Smells of campfire and bad decisions.", "th": false, "k": ""}, {"n": "Roadworn Jerkin", "set": "Roadworn (rogue starter)", "slot": "Chest piece", "r": "common", "s": {"agi": 2}, "e": "Patched so often none of the original leather remains.", "th": false, "k": ""}, {"n": "Roadworn Wraps", "set": "Roadworn (rogue starter)", "slot": "Gloves", "r": "common", "s": {"agi": 2}, "e": "Flavor only.", "th": false, "k": ""}, {"n": "Roadworn Breeches", "set": "Roadworn (rogue starter)", "slot": "Leggings", "r": "common", "s": {"agi": 1, "vit": 1}, "e": "Flavor only.", "th": false, "k": ""}, {"n": "Roadworn Boots", "set": "Roadworn (rogue starter)", "slot": "Boots", "r": "common", "s": {"agi": 2}, "e": "Soft soles; traps click a little later.", "th": false, "k": ""}, {"n": "Rusty Dagger", "set": "Roadworn (rogue starter)", "slot": "Main hand", "r": "common", "s": {"agi": 2}, "e": "Fast, light, one-handed.", "th": false, "k": ""}, {"n": "Chipped Parrying Knife", "set": "Roadworn (rogue starter)", "slot": "Off hand", "r": "common", "s": {"agi": 2}, "e": "Off-hand dagger; enables dual wield.", "th": false, "k": "dagger"}, {"n": "Militia Cap", "set": "Militia (warrior starter)", "slot": "Helmet", "r": "common", "s": {"vit": 2}, "e": "Flavor only.", "th": false, "k": ""}, {"n": "Militia Hauberk", "set": "Militia (warrior starter)", "slot": "Chest piece", "r": "common", "s": {"vit": 3}, "e": "Flavor only.", "th": false, "k": ""}, {"n": "Militia Gauntlets", "set": "Militia (warrior starter)", "slot": "Gloves", "r": "common", "s": {"str": 1, "vit": 1}, "e": "Flavor only.", "th": false, "k": ""}, {"n": "Militia Greaves", "set": "Militia (warrior starter)", "slot": "Leggings", "r": "common", "s": {"vit": 2}, "e": "Flavor only.", "th": false, "k": ""}, {"n": "Militia Boots", "set": "Militia (warrior starter)", "slot": "Boots", "r": "common", "s": {"vit": 1, "regen": 1}, "e": "Flavor only.", "th": false, "k": ""}, {"n": "Notched Longsword", "set": "Militia (warrior starter)", "slot": "Main hand", "r": "common", "s": {"str": 3}, "e": "One-handed. Works fine in a rogue's hand too.", "th": false, "k": ""}, {"n": "Plank Shield", "set": "Militia (warrior starter)", "slot": "Off hand", "r": "common", "s": {"vit": 2}, "e": "Shield. Smells like the door it used to be.", "th": false, "k": "shield"}, {"n": "Acolyte's Coif", "set": "Acolyte (paladin starter)", "slot": "Helmet", "r": "common", "s": {"vit": 1, "regen": 1}, "e": "Flavor only.", "th": false, "k": ""}, {"n": "Acolyte's Tabard", "set": "Acolyte (paladin starter)", "slot": "Chest piece", "r": "common", "s": {"vit": 2, "int": 1}, "e": "Flavor only.", "th": false, "k": ""}, {"n": "Iron Mace", "set": "Acolyte (paladin starter)", "slot": "Main hand", "r": "common", "s": {"str": 2, "vit": 1}, "e": "One-handed blunt weapon.", "th": false, "k": ""}, {"n": "Prayer Beads", "set": "Acolyte (paladin starter)", "slot": "Necklace", "r": "common", "s": {"regen": 2}, "e": "Flavor only.", "th": false, "k": ""}, {"n": "Novice's Cowl", "set": "Novice (mage starter)", "slot": "Helmet", "r": "common", "s": {"int": 2}, "e": "Flavor only.", "th": false, "k": ""}, {"n": "Novice's Robe", "set": "Novice (mage starter)", "slot": "Chest piece", "r": "common", "s": {"int": 2, "regen": 1}, "e": "Flavor only.", "th": false, "k": ""}, {"n": "Oak Wand", "set": "Novice (mage starter)", "slot": "Main hand", "r": "common", "s": {"int": 3}, "e": "One-handed caster weapon.", "th": false, "k": ""}, {"n": "Dog-eared Primer", "set": "Novice (mage starter)", "slot": "Off hand", "r": "common", "s": {"int": 2}, "e": "Tome. Half the pages are doodles.", "th": false, "k": "focus"}, {"n": "Copper Band", "set": "Unaffiliated", "slot": "Ring", "r": "common", "s": {"vit": 2}, "e": "Flavor only.", "th": false, "k": ""}, {"n": "Bone Ring", "set": "Unaffiliated", "slot": "Ring", "r": "common", "s": {"agi": 2}, "e": "Flavor only.", "th": false, "k": ""}, {"n": "Tin Locket", "set": "Unaffiliated", "slot": "Necklace", "r": "common", "s": {"int": 1, "vit": 1}, "e": "Holds a portrait nobody recognizes.", "th": false, "k": ""}, {"n": "Woodcutter's Axe", "set": "Unaffiliated", "slot": "Main hand", "r": "common", "s": {"str": 3}, "e": "One-handed axe.", "th": false, "k": ""}, {"n": "Hunting Bow", "set": "Unaffiliated", "slot": "Main hand", "r": "common", "s": {"agi": 3}, "e": "Two-handed (occupies main + off hand under the suggested rule).", "th": true, "k": ""}, {"n": "Quarterstaff", "set": "Unaffiliated", "slot": "Main hand", "r": "common", "s": {"str": 2, "int": 2}, "e": "Two-handed staff; hits and channels.", "th": true, "k": ""}, {"n": "Duskrunner Mask", "set": "Duskrunner (rogue)", "slot": "Helmet", "r": "uncommon", "s": {"agi": 5}, "e": "Slight dodge bonus in the first room of each floor.", "th": false, "k": ""}, {"n": "Duskrunner Vest", "set": "Duskrunner (rogue)", "slot": "Chest piece", "r": "uncommon", "s": {"agi": 5}, "e": "After a dodge, next hit lands a bit faster.", "th": false, "k": ""}, {"n": "Duskrunner Grips", "set": "Duskrunner (rogue)", "slot": "Gloves", "r": "uncommon", "s": {"agi": 4}, "e": "Small chance to strike twice.", "th": false, "k": ""}, {"n": "Duskrunner Leggings", "set": "Duskrunner (rogue)", "slot": "Leggings", "r": "uncommon", "s": {"agi": 4}, "e": "Trap damage slightly reduced.", "th": false, "k": ""}, {"n": "Duskrunner Treads", "set": "Duskrunner (rogue)", "slot": "Boots", "r": "uncommon", "s": {"agi": 5}, "e": "Slightly faster room clears.", "th": false, "k": ""}, {"n": "Ironhide Helm", "set": "Ironhide (warrior)", "slot": "Helmet", "r": "uncommon", "s": {"vit": 5}, "e": "Blocks a little extra from the first hit each room.", "th": false, "k": ""}, {"n": "Ironhide Cuirass", "set": "Ironhide (warrior)", "slot": "Chest piece", "r": "uncommon", "s": {"vit": 5, "str": 1}, "e": "Taking a big hit briefly raises Strength.", "th": false, "k": ""}, {"n": "Ironhide Fists", "set": "Ironhide (warrior)", "slot": "Gloves", "r": "uncommon", "s": {"str": 4}, "e": "Heavier hits on enemies above half HP.", "th": false, "k": ""}, {"n": "Ironhide Legplates", "set": "Ironhide (warrior)", "slot": "Leggings", "r": "uncommon", "s": {"vit": 4, "regen": 1}, "e": "Flavor: dented exactly where it matters.", "th": false, "k": ""}, {"n": "Ironhide Sabatons", "set": "Ironhide (warrior)", "slot": "Boots", "r": "uncommon", "s": {"vit": 3, "str": 2}, "e": "Small knockback on heavy hits.", "th": false, "k": ""}, {"n": "Dawnward Visor", "set": "Dawnward (paladin)", "slot": "Helmet", "r": "uncommon", "s": {"vit": 3, "regen": 2}, "e": "Heal slightly at the start of each room.", "th": false, "k": ""}, {"n": "Dawnward Breastplate", "set": "Dawnward (paladin)", "slot": "Chest piece", "r": "uncommon", "s": {"vit": 4, "int": 2}, "e": "Small ward when HP drops below half, once per floor.", "th": false, "k": ""}, {"n": "Dawnward Gauntlets", "set": "Dawnward (paladin)", "slot": "Gloves", "r": "uncommon", "s": {"str": 3, "int": 1}, "e": "Hits against undead deal a bit more.", "th": false, "k": ""}, {"n": "Dawnward Halberd", "set": "Dawnward (paladin)", "slot": "Main hand", "r": "uncommon", "s": {"str": 5, "vit": 1}, "e": "Two-handed polearm; reach hits strike first.", "th": true, "k": ""}, {"n": "Ashweave Hood", "set": "Ashweave (mage)", "slot": "Helmet", "r": "uncommon", "s": {"int": 4, "regen": 1}, "e": "Firebolt-type spells cost slightly less.", "th": false, "k": ""}, {"n": "Ashweave Robe", "set": "Ashweave (mage)", "slot": "Chest piece", "r": "uncommon", "s": {"int": 5}, "e": "Small mana refund when a spell kills.", "th": false, "k": ""}, {"n": "Ashweave Gloves", "set": "Ashweave (mage)", "slot": "Gloves", "r": "uncommon", "s": {"int": 3, "agi": 1}, "e": "Spells cast slightly faster.", "th": false, "k": ""}, {"n": "Cinder Orb", "set": "Ashweave (mage)", "slot": "Off hand", "r": "uncommon", "s": {"int": 4}, "e": "Orb. Spell hits leave a small burn.", "th": false, "k": "focus"}, {"n": "Thief's Signet", "set": "Unaffiliated", "slot": "Ring", "r": "uncommon", "s": {"agi": 4}, "e": "A little more gold from chests.", "th": false, "k": ""}, {"n": "Soldier's Band", "set": "Unaffiliated", "slot": "Ring", "r": "uncommon", "s": {"str": 3, "vit": 2}, "e": "Flavor only.", "th": false, "k": ""}, {"n": "Sage's Ring", "set": "Unaffiliated", "slot": "Ring", "r": "uncommon", "s": {"int": 3, "regen": 1}, "e": "Flavor only.", "th": false, "k": ""}, {"n": "Wolf-tooth Necklace", "set": "Unaffiliated", "slot": "Necklace", "r": "uncommon", "s": {"str": 2, "agi": 2}, "e": "Slightly faster attacks after a kill.", "th": false, "k": ""}, {"n": "Pair of Skinning Knives", "set": "Unaffiliated", "slot": "Main hand", "r": "uncommon", "s": {"agi": 4, "str": 1}, "e": "One-handed dagger; barbarian dual-wield favorite.", "th": false, "k": ""}, {"n": "Kite Shield", "set": "Unaffiliated", "slot": "Off hand", "r": "uncommon", "s": {"vit": 5}, "e": "Shield. Small chance to fully block.", "th": false, "k": "shield"}, {"n": "War Axe", "set": "Unaffiliated", "slot": "Main hand", "r": "uncommon", "s": {"str": 5}, "e": "One-handed axe; hits slightly harder vs. armored foes.", "th": false, "k": ""}, {"n": "Veilstep Cowl", "set": "Veilstep (rogue)", "slot": "Helmet", "r": "rare", "s": {"agi": 8}, "e": "First hit taken each floor has a high chance to be dodged.", "th": false, "k": ""}, {"n": "Veilstep Leathers", "set": "Veilstep (rogue)", "slot": "Chest piece", "r": "rare", "s": {"agi": 9}, "e": "Dodging a hit grants a brief speed burst.", "th": false, "k": ""}, {"n": "Veilstep Gloves", "set": "Veilstep (rogue)", "slot": "Gloves", "r": "rare", "s": {"agi": 7}, "e": "Crits apply a short bleed.", "th": false, "k": ""}, {"n": "Veilstep Trousers", "set": "Veilstep (rogue)", "slot": "Leggings", "r": "rare", "s": {"agi": 6, "vit": 2}, "e": "Traps are sometimes avoided entirely.", "th": false, "k": ""}, {"n": "Veilstep Boots", "set": "Veilstep (rogue)", "slot": "Boots", "r": "rare", "s": {"agi": 8}, "e": "Moving between rooms is faster.", "th": false, "k": ""}, {"n": "Veilstep Kris", "set": "Veilstep (rogue)", "slot": "Off hand", "r": "rare", "s": {"agi": 6}, "e": "Off-hand dagger; off-hand hits ignore some armor.", "th": false, "k": "dagger"}, {"n": "Bulwark Greathelm", "set": "Bulwark (warrior/paladin)", "slot": "Helmet", "r": "rare", "s": {"vit": 8}, "e": "Reduces crit damage taken.", "th": false, "k": ""}, {"n": "Bulwark Plate", "set": "Bulwark (warrior/paladin)", "slot": "Chest piece", "r": "rare", "s": {"vit": 8, "regen": 2}, "e": "Damage taken is slightly reduced while above 75% HP.", "th": false, "k": ""}, {"n": "Bulwark Gauntlets", "set": "Bulwark (warrior/paladin)", "slot": "Gloves", "r": "rare", "s": {"str": 6, "vit": 2}, "e": "Blocked hits counterattack.", "th": false, "k": ""}, {"n": "Bulwark Tower Shield", "set": "Bulwark (warrior/paladin)", "slot": "Off hand", "r": "rare", "s": {"vit": 9}, "e": "Shield. Blocks one projectile per room.", "th": false, "k": "shield"}, {"n": "Rageborn Skullcap", "set": "Rageborn (barbarian)", "slot": "Helmet", "r": "rare", "s": {"str": 5, "vit": 3}, "e": "Gain damage as HP drops.", "th": false, "k": ""}, {"n": "Rageborn Harness", "set": "Rageborn (barbarian)", "slot": "Chest piece", "r": "rare", "s": {"str": 6, "vit": 3}, "e": "Kills heal a small amount.", "th": false, "k": ""}, {"n": "Rageborn Wraps", "set": "Rageborn (barbarian)", "slot": "Gloves", "r": "rare", "s": {"str": 5, "agi": 3}, "e": "Each hit in a row is slightly faster, up to 5 stacks.", "th": false, "k": ""}, {"n": "Rageborn Kilt", "set": "Rageborn (barbarian)", "slot": "Leggings", "r": "rare", "s": {"vit": 6, "str": 2}, "e": "Flavor: the most dangerous skirt in the dungeon.", "th": false, "k": ""}, {"n": "Twin Fangs", "set": "Rageborn (barbarian)", "slot": "Main hand", "r": "rare", "s": {"agi": 5, "str": 4}, "e": "One-handed dagger pair; barbarian dual daggers. Each hit has a small chance to repeat.", "th": false, "k": ""}, {"n": "Starlit Circlet", "set": "Starlit (mage)", "slot": "Helmet", "r": "rare", "s": {"int": 7, "regen": 1}, "e": "Spell crits restore a bit of mana.", "th": false, "k": ""}, {"n": "Starlit Vestments", "set": "Starlit (mage)", "slot": "Chest piece", "r": "rare", "s": {"int": 7, "vit": 2}, "e": "Physical damage taken reduced slightly (eases the caster +20% penalty).", "th": false, "k": ""}, {"n": "Starlit Slippers", "set": "Starlit (mage)", "slot": "Boots", "r": "rare", "s": {"int": 4, "agi": 4}, "e": "Short blink away from melee once per room.", "th": false, "k": ""}, {"n": "Starlit Staff", "set": "Starlit (mage)", "slot": "Main hand", "r": "rare", "s": {"int": 10, "str": 2}, "e": "Two-handed staff; spells chain to one extra target.", "th": true, "k": ""}, {"n": "Ring of Minor Regen", "set": "Unaffiliated", "slot": "Ring", "r": "rare", "s": {"regen": 7}, "e": "Regen also ticks during boss fights.", "th": false, "k": ""}, {"n": "Ring of the Duelist", "set": "Unaffiliated", "slot": "Ring", "r": "rare", "s": {"agi": 4, "str": 4}, "e": "Bonus damage when only one enemy remains.", "th": false, "k": ""}, {"n": "Amulet of Clear Thought", "set": "Unaffiliated", "slot": "Necklace", "r": "rare", "s": {"int": 6, "regen": 2}, "e": "Mana regenerates between rooms.", "th": false, "k": ""}, {"n": "Acrobat's Boots", "set": "Unaffiliated", "slot": "Boots", "r": "rare", "s": {"agi": 8}, "e": "Dodges have a small chance to also reset attack timer.", "th": false, "k": ""}, {"n": "Knight's Longsword", "set": "Unaffiliated", "slot": "Main hand", "r": "rare", "s": {"str": 7, "agi": 2}, "e": "One-handed. Rogue pairing: crits from dodges deal extra.", "th": false, "k": ""}, {"n": "Flanged Mace", "set": "Unaffiliated", "slot": "Main hand", "r": "rare", "s": {"str": 8}, "e": "One-handed; hits briefly stun.", "th": false, "k": ""}, {"n": "Ashwood Longbow", "set": "Unaffiliated", "slot": "Main hand", "r": "rare", "s": {"agi": 8, "str": 2}, "e": "Two-handed bow; first shot each room always lands.", "th": true, "k": ""}, {"n": "Grimoire of Embers", "set": "Unaffiliated", "slot": "Off hand", "r": "rare", "s": {"int": 7}, "e": "Tome. Also adds a little fire to weapon hits (hybrid builds).", "th": false, "k": "focus"}, {"n": "Whisperknife Hood", "set": "Whisperknife (rogue)", "slot": "Helmet", "r": "epic", "s": {"agi": 13}, "e": "Enemies lose track of you for a moment after a dodge.", "th": false, "k": ""}, {"n": "Whisperknife Coat", "set": "Whisperknife (rogue)", "slot": "Chest piece", "r": "epic", "s": {"agi": 15}, "e": "Every 3rd dodge makes your next hit a guaranteed crit.", "th": false, "k": ""}, {"n": "Whisperknife Gloves", "set": "Whisperknife (rogue)", "slot": "Gloves", "r": "epic", "s": {"agi": 11}, "e": "Crit chance up, but crits against bosses are weaker.", "th": false, "k": ""}, {"n": "Whisperknife Leggings", "set": "Whisperknife (rogue)", "slot": "Leggings", "r": "epic", "s": {"agi": 10, "vit": 3}, "e": "Traps triggered near you hit enemies instead, sometimes.", "th": false, "k": ""}, {"n": "Whisperknife Boots", "set": "Whisperknife (rogue)", "slot": "Boots", "r": "epic", "s": {"agi": 13}, "e": "Opening hit in each room deals heavy bonus damage.", "th": false, "k": ""}, {"n": "Warlord's Crown", "set": "Warlord (warrior)", "slot": "Helmet", "r": "epic", "s": {"vit": 10, "str": 4}, "e": "Elite enemies deal less damage to you.", "th": false, "k": ""}, {"n": "Warlord's Mail", "set": "Warlord (warrior)", "slot": "Chest piece", "r": "epic", "s": {"vit": 12, "str": 3}, "e": "Below 30% HP, gain a brief damage shield once per floor.", "th": false, "k": ""}, {"n": "Warlord's Grips", "set": "Warlord (warrior)", "slot": "Gloves", "r": "epic", "s": {"str": 11}, "e": "Overkill damage carries to the next enemy.", "th": false, "k": ""}, {"n": "Warlord's Poleaxe", "set": "Warlord (warrior)", "slot": "Main hand", "r": "epic", "s": {"str": 15, "vit": 3}, "e": "Two-handed axe; cleaves all adjacent enemies.", "th": true, "k": ""}, {"n": "Oathkeeper Helm", "set": "Oathkeeper (paladin)", "slot": "Helmet", "r": "epic", "s": {"vit": 8, "int": 5}, "e": "Heal spells also grant a small ward.", "th": false, "k": ""}, {"n": "Oathkeeper Plate", "set": "Oathkeeper (paladin)", "slot": "Chest piece", "r": "epic", "s": {"vit": 10, "regen": 4}, "e": "Regen is doubled when no enemies are nearby.", "th": false, "k": ""}, {"n": "Oathkeeper Greaves", "set": "Oathkeeper (paladin)", "slot": "Leggings", "r": "epic", "s": {"vit": 9, "int": 3}, "e": "Immune to slows.", "th": false, "k": ""}, {"n": "Oathkeeper Halberd", "set": "Oathkeeper (paladin)", "slot": "Main hand", "r": "epic", "s": {"str": 12, "int": 5}, "e": "Two-handed polearm. Paladin-halberd pairing: holy damage on reach hits.", "th": true, "k": ""}, {"n": "Oathkeeper Seal", "set": "Oathkeeper (paladin)", "slot": "Ring", "r": "epic", "s": {"regen": 6, "vit": 5}, "e": "Potions heal slightly more.", "th": false, "k": ""}, {"n": "Voidscript Crown", "set": "Voidscript (mage)", "slot": "Helmet", "r": "epic", "s": {"int": 12}, "e": "Archmage-tier spells cost slightly less.", "th": false, "k": ""}, {"n": "Voidscript Robes", "set": "Voidscript (mage)", "slot": "Chest piece", "r": "epic", "s": {"int": 11, "regen": 3}, "e": "Excess mana regen overflows into a small shield.", "th": false, "k": ""}, {"n": "Voidscript Handwraps", "set": "Voidscript (mage)", "slot": "Gloves", "r": "epic", "s": {"int": 9, "agi": 4}, "e": "Every 5th spell is cast twice.", "th": false, "k": ""}, {"n": "Voidscript Codex", "set": "Voidscript (mage)", "slot": "Off hand", "r": "epic", "s": {"int": 12}, "e": "Tome. Unlearned spells occasionally cast themselves.", "th": false, "k": "focus"}, {"n": "Voidscript Wand", "set": "Voidscript (mage)", "slot": "Main hand", "r": "epic", "s": {"int": 13}, "e": "One-handed wand; pairs with a shield for battle-mage builds.", "th": false, "k": ""}, {"n": "Gambler's Grin", "set": "Lucky Seven (roguelike)", "slot": "Helmet", "r": "epic", "s": {"agi": 12}, "e": "Each room: random small buff to one stat.", "th": false, "k": ""}, {"n": "Loaded Dice Ring", "set": "Lucky Seven (roguelike)", "slot": "Ring", "r": "epic", "s": {"agi": 5, "str": 5}, "e": "7% chance any hit deals 7x damage.", "th": false, "k": ""}, {"n": "Coin-Flip Pendant", "set": "Lucky Seven (roguelike)", "slot": "Necklace", "r": "epic", "s": {"vit": 6, "int": 6}, "e": "Each floor: heads = +15% damage, tails = +15% damage reduction.", "th": false, "k": ""}, {"n": "Roulette Gauntlets", "set": "Lucky Seven (roguelike)", "slot": "Gloves", "r": "epic", "s": {"str": 6, "int": 6}, "e": "Hits randomly deal physical, fire or frost damage.", "th": false, "k": ""}, {"n": "Jackpot Boots", "set": "Lucky Seven (roguelike)", "slot": "Boots", "r": "epic", "s": {"agi": 8, "regen": 4}, "e": "Chests have a chance to drop a second item.", "th": false, "k": ""}, {"n": "Bloodstone Ring", "set": "Unaffiliated", "slot": "Ring", "r": "epic", "s": {"vit": 7, "str": 5}, "e": "Life steal on crits.", "th": false, "k": ""}, {"n": "Torc of the Wyrm", "set": "Unaffiliated", "slot": "Necklace", "r": "epic", "s": {"vit": 8, "str": 6}, "e": "Fire damage taken reduced.", "th": false, "k": ""}, {"n": "Executioner's Greatsword", "set": "Unaffiliated", "slot": "Main hand", "r": "epic", "s": {"str": 16}, "e": "Two-handed; enemies under 15% HP die instantly.", "th": true, "k": ""}, {"n": "Spiked Buckler", "set": "Unaffiliated", "slot": "Off hand", "r": "epic", "s": {"vit": 7, "agi": 5}, "e": "Shield. Blocks reflect damage; light enough for rogues.", "th": false, "k": "shield"}, {"n": "Crown of Nightfall", "set": "Nightfall Regalia (rogue)", "slot": "Helmet", "r": "legendary", "s": {"agi": 20}, "e": "Once per floor, a lethal hit is dodged automatically.", "th": false, "k": ""}, {"n": "Nightfall Shroud", "set": "Nightfall Regalia (rogue)", "slot": "Chest piece", "r": "legendary", "s": {"agi": 22}, "e": "Dodging builds Shadow; at 10 stacks, next hit is a massive crit.", "th": false, "k": ""}, {"n": "Nightfall Talons", "set": "Nightfall Regalia (rogue)", "slot": "Gloves", "r": "legendary", "s": {"agi": 16}, "e": "Bleeds you apply stack and spread on kill.", "th": false, "k": ""}, {"n": "Nightfall Stride", "set": "Nightfall Regalia (rogue)", "slot": "Boots", "r": "legendary", "s": {"agi": 19}, "e": "Each room cleared without being hit grants stacking speed.", "th": false, "k": ""}, {"n": "Nightfall Fang", "set": "Nightfall Regalia (rogue)", "slot": "Off hand", "r": "legendary", "s": {"agi": 14, "str": 4}, "e": "Off-hand dagger; off-hand hits always crit vs. bleeding foes.", "th": false, "k": "dagger"}, {"n": "Titanbreaker Helm", "set": "Titanbreaker (warrior/barbarian)", "slot": "Helmet", "r": "legendary", "s": {"vit": 16, "str": 5}, "e": "Cannot be stunned.", "th": false, "k": ""}, {"n": "Titanbreaker Plate", "set": "Titanbreaker (warrior/barbarian)", "slot": "Chest piece", "r": "legendary", "s": {"vit": 18, "str": 4}, "e": "Damage taken is converted partly into Strength for the room.", "th": false, "k": ""}, {"n": "Titanbreaker Fists", "set": "Titanbreaker (warrior/barbarian)", "slot": "Gloves", "r": "legendary", "s": {"str": 17}, "e": "Every 4th hit causes a shockwave.", "th": false, "k": ""}, {"n": "Titanbreaker Legguards", "set": "Titanbreaker (warrior/barbarian)", "slot": "Leggings", "r": "legendary", "s": {"vit": 15, "regen": 5}, "e": "Recover HP equal to a share of overkill damage dealt.", "th": false, "k": ""}, {"n": "Titanbreaker Maul", "set": "Titanbreaker (warrior/barbarian)", "slot": "Main hand", "r": "legendary", "s": {"str": 22}, "e": "Two-handed hammer; boss stagger builds faster.", "th": true, "k": ""}, {"n": "Sunforged Halo", "set": "Sunforged (paladin)", "slot": "Helmet", "r": "legendary", "s": {"vit": 12, "int": 8}, "e": "Fully heal once per floor when HP drops below 20%.", "th": false, "k": ""}, {"n": "Sunforged Aegis", "set": "Sunforged (paladin)", "slot": "Off hand", "r": "legendary", "s": {"vit": 18}, "e": "Shield. Blocks heal you; undead blocked are seared.", "th": false, "k": "shield"}, {"n": "Sunforged Sabatons", "set": "Sunforged (paladin)", "slot": "Boots", "r": "legendary", "s": {"vit": 12, "regen": 8}, "e": "Leave a healing trail between rooms.", "th": false, "k": ""}, {"n": "Sunforged Morningstar", "set": "Sunforged (paladin)", "slot": "Main hand", "r": "legendary", "s": {"str": 15, "int": 7}, "e": "One-handed mace; holy burst on crit.", "th": false, "k": ""}, {"n": "Archon's Diadem", "set": "Archon's Mantle (mage)", "slot": "Helmet", "r": "legendary", "s": {"int": 18}, "e": "Soft cap (70) gains count 75% instead of half while worn.", "th": false, "k": ""}, {"n": "Archon's Robe", "set": "Archon's Mantle (mage)", "slot": "Chest piece", "r": "legendary", "s": {"int": 16, "vit": 5}, "e": "The +20% physical damage penalty for pure casters is halved.", "th": false, "k": ""}, {"n": "Archon's Orb", "set": "Archon's Mantle (mage)", "slot": "Off hand", "r": "legendary", "s": {"int": 17}, "e": "Orb. One extra Archmage spell slot.", "th": false, "k": "focus"}, {"n": "Archon's Staff", "set": "Archon's Mantle (mage)", "slot": "Main hand", "r": "legendary", "s": {"int": 22, "regen": 4}, "e": "Two-handed staff; spells have a chance to cost no mana.", "th": true, "k": ""}, {"n": "Croupier's Visor", "set": "House Edge (roguelike)", "slot": "Helmet", "r": "legendary", "s": {"agi": 10, "int": 10}, "e": "Challenge bar success odds shown +5% better than they are... and they actually are.", "th": false, "k": ""}, {"n": "Double-or-Nothing Ring", "set": "House Edge (roguelike)", "slot": "Ring", "r": "legendary", "s": {"str": 9, "agi": 9}, "e": "On kill: 50% chance next hit deals double, 50% it deals nothing.", "th": false, "k": ""}, {"n": "Fortune's Locket", "set": "House Edge (roguelike)", "slot": "Necklace", "r": "legendary", "s": {"vit": 10, "regen": 8}, "e": "Each floor, one random item you wear counts one rarity higher.", "th": false, "k": ""}, {"n": "Wildcard Blade", "set": "House Edge (roguelike)", "slot": "Main hand", "r": "legendary", "s": {"str": 12, "agi": 8}, "e": "One-handed; each room rolls a new random on-hit effect.", "th": false, "k": ""}, {"n": "Snake-Eyes Boots", "set": "House Edge (roguelike)", "slot": "Boots", "r": "legendary", "s": {"agi": 18}, "e": "Failed challenge bars refund part of the wager.", "th": false, "k": ""}, {"n": "Band of Echoes", "set": "Unaffiliated", "slot": "Ring", "r": "legendary", "s": {"int": 10, "agi": 8}, "e": "Your last spell repeats when you kill an enemy.", "th": false, "k": ""}, {"n": "Heartseeker Ring", "set": "Unaffiliated", "slot": "Ring", "r": "legendary", "s": {"str": 12, "agi": 6}, "e": "Crits against full-HP enemies deal triple.", "th": false, "k": ""}, {"n": "Amulet of the Undying Line", "set": "Unaffiliated", "slot": "Necklace", "r": "legendary", "s": {"vit": 16, "regen": 6}, "e": "Heir inherits +1 extra Vitality if you die wearing it.", "th": false, "k": ""}, {"n": "Stormcaller Longbow", "set": "Unaffiliated", "slot": "Main hand", "r": "legendary", "s": {"agi": 18, "int": 6}, "e": "Two-handed bow; arrows chain lightning on crit.", "th": true, "k": ""}, {"n": "Kingslayer Longsword", "set": "Unaffiliated", "slot": "Main hand", "r": "legendary", "s": {"str": 16, "agi": 6}, "e": "One-handed; bonus damage vs. bosses. Excellent in a rogue's hand.", "th": false, "k": ""}, {"n": "Tome of the Thousand Hands", "set": "Unaffiliated", "slot": "Off hand", "r": "legendary", "s": {"int": 15, "str": 5}, "e": "Tome. Weapon hits have a chance to cast your lowest-tier spell.", "th": false, "k": "focus"}, {"n": "Last Heir's Crown", "set": "Mythic Armor Set: Raiment of the Last Heir", "slot": "Helmet", "r": "mythic", "s": {"vit": 18, "int": 10, "agi": 6}, "e": "Your stat ceilings from inheritance feel briefly lifted: +5% to your highest stat.", "th": false, "k": ""}, {"n": "Last Heir's Cuirass", "set": "Mythic Armor Set: Raiment of the Last Heir", "slot": "Chest piece", "r": "mythic", "s": {"vit": 28, "regen": 8}, "e": "Once per floor, a lethal hit leaves you at 1 HP.", "th": false, "k": ""}, {"n": "Last Heir's Gauntlets", "set": "Mythic Armor Set: Raiment of the Last Heir", "slot": "Gloves", "r": "mythic", "s": {"str": 16, "agi": 12}, "e": "Hits have a chance to strike as both physical and magic.", "th": false, "k": ""}, {"n": "Last Heir's Legplates", "set": "Mythic Armor Set: Raiment of the Last Heir", "slot": "Leggings", "r": "mythic", "s": {"vit": 20, "agi": 10}, "e": "Immune to bleed and slows.", "th": false, "k": ""}, {"n": "Last Heir's Treads", "set": "Mythic Armor Set: Raiment of the Last Heir", "slot": "Boots", "r": "mythic", "s": {"agi": 28}, "e": "Between rooms, recover a portion of HP and mana.", "th": false, "k": ""}, {"n": "Endless Crown Signet (Sun)", "set": "Mythic Accessory+Weapon Set: Regalia of the Endless Crown", "slot": "Ring", "r": "mythic", "s": {"str": 14, "vit": 12}, "e": "Kills extend all your active buffs.", "th": false, "k": ""}, {"n": "Endless Crown Signet (Moon)", "set": "Mythic Accessory+Weapon Set: Regalia of the Endless Crown", "slot": "Ring", "r": "mythic", "s": {"int": 14, "regen": 10}, "e": "Spells refund mana on crit.", "th": false, "k": ""}, {"n": "Endless Crown Torc", "set": "Mythic Accessory+Weapon Set: Regalia of the Endless Crown", "slot": "Necklace", "r": "mythic", "s": {"vit": 14, "int": 8, "agi": 8}, "e": "Divine intervention charges also grant a short power surge.", "th": false, "k": ""}, {"n": "Endless Crown Blade", "set": "Mythic Accessory+Weapon Set: Regalia of the Endless Crown", "slot": "Main hand", "r": "mythic", "s": {"str": 26, "agi": 6}, "e": "One-handed; shapeshifts to match your build (dagger speed, sword reach, or wand casting by highest stat).", "th": false, "k": ""}, {"n": "Endless Crown Ward", "set": "Mythic Accessory+Weapon Set: Regalia of the Endless Crown", "slot": "Off hand", "r": "mythic", "s": {"vit": 20, "int": 8}, "e": "Shield/focus hybrid; block chance and spell power both scale with it.", "th": false, "k": "shield"}];</script><script>// ===== Automated Dungeon Crawler — prototype engine (no DOM) =====
+const RAR=['common','uncommon','rare','epic','legendary','mythic'];
+const RCOL={common:'#e8e8e8',uncommon:'#f2d43a',rare:'#3a8cff',epic:'#a347ff',legendary:'#ff8a1f',mythic:'#ff3030'};
+const SLOTS=['Helmet','Chest piece','Gloves','Leggings','Boots','Ring 1','Ring 2','Necklace','Main hand','Off hand'];
+const WDMG={common:6,uncommon:9,rare:13,epic:18,legendary:25,mythic:34};
+const ARM={common:3,uncommon:5,rare:8,epic:12,legendary:17,mythic:24};
+const BIOMES=[
+ {n:'Crypts',c:'#3b3550',e:[['Skeleton',30,5,10,'blunt'],['Ghoul',40,6,5,'poison'],['Crypt Rat',15,2,0,'pack'],['Bone Archer',22,7,5,'ranged']]},
+ {n:'Keep',c:'#4a4038',e:[['Keep Guard',50,7,25,'block'],['Armored Knight',70,9,45,'slow'],['Crossbowman',35,11,15,'ranged'],['War Hound',30,6,5,'bleed']]},
+ {n:'Mines',c:'#3d3328',e:[['Kobold Sapper',25,14,5,'explode'],['Rock Crawler',60,8,40,'burrow'],['Deep Spider',35,8,10,'poison'],['Ore Golem',90,10,50,'slow']]},
+ {n:'Cathedral',c:'#3a3f52',e:[['Cathedral Golem',100,12,40,'magres'],['Wraith',45,12,0,'physres'],['Zealot',50,9,15,'healer']]},
+ {n:'The Pit',c:'#521f1f',e:[['Imp',30,10,5,'fire'],['Hellhound',55,13,15,'fire'],['Abyssal Horror',140,16,30,'drain']]}];
+const BANDS=[{n:'Safe',p:85,m:1},{n:'Fair',p:65,m:1.5},{n:'Risky',p:37,m:2.5},{n:'Long shot',p:15,m:4}];
+const LABELS=[['Warrior',0,-1],['Juggernaut',1,0],['Rogue',0,1],['Mage',-1,0],
+ ['Barbarian',.5,-.5],['Warden',.5,.5],['Trickster',-.5,.5],['Paladin',-.5,-.5],
+ ['Knight',0,-1/3],['Guardian',1/3,0],['Ranger',0,1/3],['Warlock',-1/3,0],['Paragon',0,0]];
+let RNG=Math.random; const rnd=()=>RNG(), ri=(a,b)=>a+Math.floor(rnd()*(b-a+1)), pick=a=>a[Math.floor(rnd()*a.length)];
+const sc=f=>Math.pow(1.035,f-1);
+
+function newSave(){
+  const s={v:1,gold:30,gen:1,base:{str:5,agi:5,int:5,vit:5},buy:{str:5,agi:8,int:2,vit:5},bag:[],equip:{},vault:[],
+    potions:0,divine:'heal',healAt:30,magnetFloor:5,die:true,oneHand2H:false,wager:null,reroll:0,best:0,runs:[],heirs:null,lastRun:null,offspring:2};
+  ITEMS.filter(i=>i.set.startsWith('Roadworn')).forEach(t=>{const it=mkItem(t,1);s.equip[t.slot=='Ring'?'Ring 1':t.slot]=it;});
+  return s;
+}
+let UID=1;
+function mkItem(t,floor,boost=0){
+  const k=Math.pow(1.0175,floor-1)*(1+boost), st={};
+  for(const a in t.s) st[a]=Math.max(1,Math.round(t.s[a]*k));
+  const it={id:Date.now().toString(36)+(UID++),n:t.n,slot:t.slot,r:t.r,s:st,e:t.e,th:t.th,k:t.k,fl:floor};
+  if(t.slot=='Main hand') it.dmg=Math.round(WDMG[t.r]*sc(floor)*(1+boost)*10)/10;
+  else if(t.slot=='Off hand'&&t.k=='dagger') it.dmg=Math.round(WDMG[t.r]*.5*sc(floor)*(1+boost)*10)/10;
+  if(['Helmet','Chest piece','Gloves','Leggings','Boots'].includes(t.slot)||t.k=='shield') it.arm=Math.round(ARM[t.r]*(t.k=='shield'?1.5:1)*sc(floor)*(1+boost));
+  return it;
+}
+function rarityRoll(floor,mult=1){
+  const st=Math.floor((floor-1)/10); let w=[52-3*st,25,12+st,7+st,4+st]; // base run: mythic 1% -> legendary (decision 72)
+  let x=rnd()*100; for(let i=0;i<5;i++){ if((x-=w[i])<0) return RAR[i]; } return 'common';
+}
+function dropItem(floor){ const r=rarityRoll(floor); return mkItem(pick(ITEMS.filter(i=>i.r==r)),floor); }
+
+function primaries(S){ const p={}; for(const a of ['str','agi','int','vit']) p[a]=S.base[a]+S.buy[a]; return p; }
+function totals(S){
+  const p=primaries(S); p.regen=0; let dmg=0,arm=0,oh=null,mh=S.equip['Main hand'];
+  for(const sl of SLOTS){ const it=S.equip[sl]; if(!it) continue;
+    if(sl=='Off hand'&&mh&&mh.th&&!S.oneHand2H) continue;
+    for(const a in it.s) p[a]=(p[a]||0)+it.s[a]; if(it.arm) arm+=it.arm; }
+  dmg=mh?mh.dmg:3; const off=S.equip['Off hand'];
+  if(mh&&mh.th&&!S.oneHand2H) dmg*=1.2; // two-hander +20%
+  else if(off&&off.dmg) dmg+=off.dmg;
+  return {...p,wdmg:dmg,arm};
+}
+function classLabel(p){
+  const t=Math.max(1,p.str+p.agi+p.int+p.vit);
+  const x=(p.vit-p.int)/t, y=(p.agi-p.str)/t;
+  let best=null,bd=9; for(const L of LABELS){const d=Math.hypot(L[1]-x,L[2]-y); if(d<bd){bd=d;best=L[0];}}
+  return {label:best,x,y};
+}
+
+// ---------- run ----------
+function startRun(S){
+  const T=totals(S), maxHp=Math.round(40+T.vit*6), maxMp=Math.round(20+T.int*4);
+  const R={f:1,room:0,rooms:[],hp:maxHp,maxHp,mp:maxMp,maxMp,T,pot:S.potions,gold:0,loot:[],log:[],t:0,
+    enemies:[],state:'enter',timer:0.6,atkT:0,spT:2,dead:false,divineUsed:S.divine=='off',dot:[],floorBuff:1,
+    wager:S.wager?{...S.wager,done:false}:null,rerolls:0,bought:S.reroll,events:[],magnet:false,kills:0};
+  S.potions=0; S.reroll=0;
+  R.th=T.vit>=60&&T.regen>=25?25:T.vit>=45&&T.regen>=15?15:T.vit>=30?10:5;
+  R.pure=T.int>=0.6*(T.str+T.agi+T.int+T.vit);
+  planFloor(R); log(R,`Gen ${S.gen} enters the Crypts. Potion threshold ${R.th}%.`);
+  return R;
+}
+function log(R,m,c){ R.log.push({m,c,f:R.f}); if(R.log.length>200) R.log.shift(); }
+function planFloor(R){
+  if(R.f%10==0) R.rooms=['boss'];
+  else { R.rooms=['combat','trap','treasure','rest','event']; for(let i=4;i>0;i--){const j=ri(0,i);[R.rooms[i],R.rooms[j]]=[R.rooms[j],R.rooms[i]];} }
+  R.room=0;
+}
+const biome=f=>BIOMES[Math.min(4,Math.floor((f-1)/20))];
+function spawn(R,boss){
+  const b=biome(R.f), k=sc(R.f), list=[];
+  if(boss){ const e=b.e.reduce((a,c)=>c[1]>a[1]?c:a); list.push(mkEn(e,k*1.0,3,'Boss: ')); }
+  else { let n=ri(2,3); const e0=pick(b.e); if(e0[4]=='pack') n=3; for(let i=0;i<n;i++) list.push(mkEn(i?pick(b.e):e0,k,1,'')); }
+  R.enemies=list;
+}
+function mkEn(e,k,hm,pre){ return {n:pre+e[0],hp:e[1]*k*hm*1.2,max:e[1]*k*hm*1.2,dmg:e[2]*k*1.5*(hm>1?1.6:1),arm:e[3]*k,tr:e[4],t:e[4]=='ranged'?0:0.9+rnd()*.6,blocked:false}; }
+function heal(R,a){ R.hp=Math.min(R.maxHp,R.hp+a); }
+function gainPotion(R){
+  if(R.pot<3){R.pot++; log(R,'Found a potion.','#7f7');}
+  else { const m=R.maxHp-R.hp; heal(R,R.maxHp*.35); log(R,`Potion found with full slots: drank it (+${Math.round(Math.min(m,R.maxHp*.35))} HP).`,'#7f7'); }
+}
+function drink(R,why){ R.pot--; heal(R,R.maxHp*.35); log(R,`Drank a potion (${why}).`,'#7f7'); }
+function gainItem(R,it){ R.loot.push(it); log(R,`Loot: ${it.n}`,RCOL[it.r]); }
+function hurt(S,R,raw,phys=true,src=''){
+  const K=50*sc(R.f), red=Math.min(.75,R.T.arm/(R.T.arm+K));
+  let d=raw*(phys?1-red:1); if(phys&&R.pure) d*=1.2;
+  R.hp-=d; return d;
+}
+function checkLife(S,R){
+  if(R.hp<=R.maxHp*R.th/100 && R.pot>0 && R.hp>0) drink(R,`HP under ${R.th}%`);
+  if(!R.divineUsed&&S.divine=='heal'&&R.hp>0&&R.hp<R.maxHp*S.healAt/100){R.divineUsed=true;R.hp=R.maxHp;R.mp=R.maxMp;R.dot=[];log(R,'Divine intervention: full heal!','#ffd75e');}
+  if(R.hp<=0){R.hp=0;R.dead=true;R.state='dead';log(R,`Died on floor ${R.f}.`,'#f66');}
+}
+function step(S,R,dt){
+  if(R.dead||R.state=='done') return;
+  R.t+=dt;
+  R.mp=Math.min(R.maxMp,R.mp+dt*(R.T.regen*0.3+R.T.int*0.05+0.5));
+  for(const d of R.dot){ R.hp-=d.dps*dt; d.t-=dt; } R.dot=R.dot.filter(d=>d.t>0); checkLife(S,R); if(R.dead) return;
+  if(R.state=='enter'){ R.timer-=dt; if(R.timer<=0) enterRoom(S,R); return; }
+  if(R.state=='pause'){ R.timer-=dt; if(R.timer<=0) nextRoom(S,R); return; }
+  if(R.state=='fight') fight(S,R,dt);
+}
+function enterRoom(S,R){
+  const type=R.rooms[R.room], f=R.f, k=sc(f); R.cur=type; const mag=R.magnet?2:1;
+  if(type=='combat'||type=='boss'){ spawn(R,type=='boss'); R.state='fight'; log(R,`${type=='boss'?'BOSS':'Combat'}: ${R.enemies.map(e=>e.n).join(', ')}`); return; }
+  if(type=='trap'){ const tr=pick([['Spike floor',1],['Flame jets',1],['Poison darts',0],['Collapsing floor',1],['Blade pendulum',1]]);
+    if(rnd()*100<Math.min(60,R.T.agi*0.6)) log(R,`${tr[0]}: avoided.`,'#9cf');
+    else { const d=hurt(S,R,7*k,true); log(R,`${tr[0]}: -${Math.round(d)} HP.`,'#f96'); if(tr[0]=='Poison darts') R.dot.push({dps:k,t:4}); }
+    checkLife(S,R);
+  }
+  if(type=='treasure'){ const g=Math.round((3+f*.5)*(0.6+rnd()*.8))*mag; R.gold+=g; log(R,`Treasure: ${g} gold.`,'#fd5');
+    for(let i=0;i<mag;i++){ if(rnd()<.55) gainItem(R,dropItem(f)); if(rnd()<.2) gainPotion(R);} }
+  if(type=='rest'){ heal(R,R.maxHp*.25); R.mp=R.maxMp; log(R,'Campfire: rested (+25% HP, mana refilled).','#7f7'); }
+  if(type=='event'){ const ev=pick(['merchant','altar','adventurer','imp']);
+    if(ev=='merchant'){ let b=0; while(R.pot<3&&R.gold>=15){R.gold-=15;R.pot++;b++;} log(R,`Wandering merchant: bought ${b} potion(s) at 15 gold.`,'#fd5'); }
+    if(ev=='altar'){ if(rnd()<.5){R.floorBuff=1.15;log(R,'Cursed altar: +15% damage this floor.','#c9f');} else {const d=R.maxHp*.1;R.hp-=d;log(R,`Cursed altar: -${Math.round(d)} HP.`,'#f96');checkLife(S,R);} }
+    if(ev=='adventurer'){ gainItem(R,dropItem(f)); log(R,'Rescued a trapped adventurer.'); }
+    if(ev=='imp'){ const bet=Math.min(R.gold,10+f); if(bet>0){ if(rnd()<.5){R.gold+=bet;log(R,`Gambling imp: won ${bet} gold.`,'#fd5');} else {R.gold-=bet;log(R,`Gambling imp: lost ${bet} gold.`,'#f96');} } else log(R,'Gambling imp: you are broke. It laughs.'); }
+  }
+  if(!R.dead){R.state='pause'; R.timer=0.7;}
+}
+function nextRoom(S,R){
+  R.room++;
+  if(R.room>=R.rooms.length){
+    if(R.wager&&!R.wager.done&&R.f>=R.wager.floor) resolveWager(S,R);
+    R.f++; R.floorBuff=1; R.magnet=(S.divine=='magnet'&&!R.divineUsed&&R.f==S.magnetFloor); if(R.magnet){R.divineUsed=true;log(R,'Divine intervention: loot magnet (×2 finds this floor).','#ffd75e');}
+    if(R.f==31) log(R,'Floor 30 passed: wager re-roll unlocked.','#ffd75e');
+    if(R.f>100){R.state='done';log(R,'Floor 100 cleared!','#ffd75e');return;}
+    if((R.f-1)%20==0) log(R,`Entering ${biome(R.f).n}.`,'#ccc');
+    planFloor(R); heal(R,2+R.T.regen);
+  } else heal(R,1+R.T.regen*.5);
+  R.state='enter'; R.timer=0.3;
+}
+function resolveWager(S,R){
+  const W=R.wager; W.done=true; const p=Math.min(95,W.p+(S.die?10:0));
+  let ok=rnd()*100<p;
+  while(!ok&&R.f>=30&&(R.rerolls<1+R.bought)){ R.rerolls++; log(R,`Wager failed — re-roll (${R.rerolls}).`,'#ffd75e'); ok=rnd()*100<p; }
+  W.ok=ok;
+  if(ok){ const g=Math.round((20+R.f*3)*W.m); R.gold+=g; log(R,`Wager "${W.n}" WON (${p}%): +${g} gold.`,'#fd5');
+    if(W.stake){ const it=S.bag.find(i=>i.id==W.stake)||Object.values(S.equip).find(i=>i&&i.id==W.stake); if(it){const ix=RAR.indexOf(it.r); if(ix<4){it.r=RAR[ix+1]; for(const a in it.s) it.s[a]=Math.round(it.s[a]*1.3); if(it.dmg) it.dmg=Math.round(it.dmg*1.3); if(it.arm) it.arm=Math.round(it.arm*1.3); log(R,`Staked ${it.n} upgraded to ${it.r}.`,RCOL[it.r]);}} } }
+  else { log(R,`Wager "${W.n}" lost (${p}%).`,'#f66');
+    if(W.stake){ S.bag=S.bag.filter(i=>i.id!=W.stake); for(const sl in S.equip) if(S.equip[sl]&&S.equip[sl].id==W.stake) delete S.equip[sl]; log(R,'Staked item lost.','#f66'); } }
+}
+function fight(S,R,dt){
+  const T=R.T, live=R.enemies.filter(e=>e.hp>0);
+  if(!live.length){ R.state='pause'; R.timer=0.5; if(R.cur=='boss') log(R,`Boss of floor ${R.f} defeated!`,'#ffd75e'); return; }
+  const K=50*sc(R.f), tgt=live[0];
+  R.atkT-=dt;
+  if(R.atkT<=0){ R.atkT=1/(1+T.agi*0.005);
+    let d=(T.wdmg+T.str*0.4)*(1+T.str*0.01)*R.floorBuff; const cr=rnd()<.05; if(cr) d*=1.5;
+    if(tgt.tr=='physres') d*=.5; if(tgt.tr=='blunt'&&/Mace|Maul|Morningstar/.test((S.equip['Main hand']||{}).n||'')) d*=1.25;
+    if(tgt.tr=='block'&&!tgt.blocked){tgt.blocked=true;d=0;}
+    if(tgt.tr=='burrow'&&!tgt.blocked){tgt.blocked=true;d=0;}
+    d*=1-Math.min(.75,tgt.arm/(tgt.arm+K)); tgt.hp-=d; R.fx={t:.15,crit:cr,dmg:d};
+  }
+  R.spT-=dt;
+  if(T.int>=10&&R.spT<=0){ const cost=R.maxMp*.05; if(R.mp>=cost){ R.mp-=cost; R.spT=Math.max(.8,2.5-T.int*.01);
+    let d=(6+T.int*0.8)*(1+T.int*0.01)*R.floorBuff; if(tgt.tr=='magres') d*=.5; tgt.hp-=d; R.fx2={t:.2};
+    if(T.int>=25&&rnd()<.3){ const h=R.maxHp*.05; heal(R,h);} } else R.spT=.5; }
+  for(const e of R.enemies){ if(e.hp<=0&&!e.dead){ e.dead=true; R.kills++;
+      if(e.tr=='explode'){ const d=hurt(S,R,e.dmg*.8,false); log(R,`${e.n} explodes: -${Math.round(d)} HP.`,'#f96'); }
+      const m=R.magnet?2:1;
+      for(let i=0;i<m;i++){ if(rnd()<.3) R.gold+=ri(1,3)+Math.floor(R.f*.15); if(rnd()<(e.n.startsWith('Boss')?1:.07)) gainItem(R,dropItem(R.f)); if(rnd()<(e.n.startsWith('Boss')?.6:.05)) gainPotion(R); }
+      if(e.n.startsWith('Boss')) R.gold+=10+R.f*2;
+  } }
+  for(const e of live){ if(e.hp<=0) continue; e.t-=dt; if(e.t>0) continue;
+    e.t=(e.tr=='slow'?2:1.4)*(0.9+rnd()*.2);
+    if(e.tr=='healer'){ const h=live.find(o=>o!==e&&o.hp>0&&o.hp<o.max); if(h&&rnd()<.5){h.hp=Math.min(h.max,h.hp+e.dmg);continue;} }
+    if(rnd()*100<Math.min(40,T.agi*.3)){ continue; }
+    let raw=e.dmg*(e.tr=='slow'&&rnd()<.33?1.8:1);
+    const K2=50*sc(R.f), pre=raw*(1-Math.min(.75,T.arm/(T.arm+K2)))*(R.pure?1.2:1);
+    if(T.agi>=50&&R.pot>0&&R.hp-pre<=0) drink(R,'preemptive');
+    const fire=e.tr=='fire'; hurt(S,R,raw,!fire);
+    if(e.tr=='poison') R.dot.push({dps:e.dmg*.15,t:3}); if(e.tr=='bleed'&&rnd()<.3) R.dot.push({dps:e.dmg*.2,t:3});
+    if(e.tr=='drain') R.mp=Math.max(0,R.mp-R.maxMp*.05);
+    checkLife(S,R); if(R.dead) return; }
+}
+function endRun(S,R){
+  const f=R.f; let cons=5+3*f; const failed=R.wager&&R.wager.done&&!R.wager.ok; if(failed&&S.die) cons=Math.round(cons*.75);
+  if(R.state=='done') cons+=500;
+  const vaultBack=S.vault.map(v=>{ const t=ITEMS.find(i=>i.n==v.n); const b=Math.min(.6,.01*f); const it=mkItem(t,v.fl,b); it.n=v.n; it.vb=Math.round(b*100); return it; });
+  S.vault=[];
+  S.gold+=R.gold+cons; S.bag.push(...R.loot,...vaultBack);
+  if(S.wager) S.wager=null;
+  const p=primaries(S), T=totals(S), cl=classLabel(T);
+  S.best=Math.max(S.best,f);
+  const sum={gen:S.gen,floor:f,gold:R.gold,cons,loot:R.loot.length,vault:vaultBack.length,kills:R.kills,label:cl.label,x:cl.x,y:cl.y,time:Math.round(R.t)};
+  S.runs.unshift(sum); S.runs=S.runs.slice(0,30); S.lastRun=sum;
+  const rate=Math.min(.6,.4+.02*Math.floor(f/10));
+  S.heirs=[]; for(let i=0;i<S.offspring;i++){ const h={}; for(const a of ['str','agi','int','vit']){ const r=a=='int'?rate*.875:rate; h[a]=Math.max(1,Math.floor(p[a]*r)+ri(-2,5)); } S.heirs.push(h); }
+  S.heirRate=rate; return sum;
+}
+function chooseHeir(S,i,steer){
+  const h=S.heirs[i]; for(const a in h) h[a]+=steer[a]||0; S.base=h; S.buy={str:5,agi:5,int:5,vit:5}; S.gen++; S.heirs=null;
+}
+if(typeof module!=='undefined') module.exports={newSave,startRun,step,endRun,chooseHeir,totals,classLabel,primaries,setRng:f=>RNG=f};
+</script><script>
+const KEY='adc-proto-v1'; let S; try{S=JSON.parse(localStorage.getItem(KEY))}catch(e){} if(!S||S.v!==1) S=newSave();
+let R=null,tab='setup',speed=1,steer={str:0,agi:0,int:0,vit:0},heirSel=0;
+const GS_PER_SEC=5; // game-seconds per real second at 1x
+const save=()=>localStorage.setItem(KEY,JSON.stringify(S));
+const $=s=>document.querySelector(s), esc=s=>String(s).replace(/[<>&]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));
+const SN={str:'Strength',agi:'Agility',int:'Intelligence',vit:'Vitality'};
+function hdr(){ $('#hGen').textContent='Gen '+S.gen; $('#hGold').textContent=S.gold+' g'; $('#hBest').textContent='Best F'+S.best; document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.t==tab)); }
+document.getElementById('nav').onclick=e=>{ if(e.target.dataset.t){ if(R&&!R.dead&&R.state!='done'&&e.target.dataset.t!='run'){} tab=e.target.dataset.t; render(); } };
+function itemLine(it,btns=''){ if(!it) return '<div class="item" style="border-color:#333"><span class="sm">— empty —</span></div>';
+  const st=Object.entries(it.s).map(([k,v])=>`${(SN[k]||'Regen').slice(0,3)} +${v}`).join(' ');
+  return `<div class="item" style="border-color:${RCOL[it.r]}"><div><div class="n" style="color:${RCOL[it.r]}">${esc(it.n)}${it.th?' <span class=sm>(2H)</span>':''}${it.vb?` <span class=sm>vault +${it.vb}%</span>`:''}</div><div class="sm">${it.slot} · F${it.fl} · ${st}${it.dmg?' · dmg '+it.dmg:''}${it.arm?' · armor '+it.arm:''}</div><div class="sm"><i>${esc(it.e)}</i></div></div><div>${btns}</div></div>`; }
+function render(){ hdr(); const m=$('#main');
+ if(tab=='setup') m.innerHTML=setupHTML(); if(tab=='gear') m.innerHTML=gearHTML(); if(tab=='lineage') m.innerHTML=lineageHTML();
+ if(tab=='run') { m.innerHTML=runHTML(); drawRun(); } if(tab=='lineage') drawGraph(); }
+function used(){ return S.buy.str+S.buy.agi+S.buy.int+S.buy.vit; }
+function setupHTML(){
+ if(S.heirs) return `<div class="sec"><div class="card"><h3>Your character died</h3>Choose an heir on the <b>Lineage</b> tab first.</div><button class="b go" onclick="tab='lineage';render()">Go to Lineage</button></div>`;
+ const T=totals(S), left=20-used();
+ let h=`<div class="sec"><div class="card"><h3>Point buy — ${left} of 20 left</h3>`;
+ for(const a of ['str','agi','int','vit']) h+=`<div class="row"><span>${SN[a]} <span class=sm>base ${S.base[a]} +${S.buy[a]}</span></span><span><button class=b onclick="pb('${a}',-1)" ${S.buy[a]?'':'disabled'}>−</button> <b>${S.base[a]+S.buy[a]}</b> <button class=b onclick="pb('${a}',1)" ${left?'':'disabled'}>+</button></span></div>`;
+ const cl=classLabel(T);
+ h+=`<div class=sm>With gear: STR ${T.str} · AGI ${T.agi} · INT ${T.int} · VIT ${T.vit} · Regen ${T.regen} · weapon dmg ${T.wdmg.toFixed(1)} · armor ${T.arm}<br>HP ${Math.round(40+T.vit*6)} · Mana ${Math.round(20+T.int*4)} · dodge ${Math.min(40,T.agi*.3).toFixed(1)}% · ${T.int>=10?'casts Firebolt':'no spells (INT 10)'} · leaning <b>${cl.label}</b></div></div>`;
+ h+=`<div class="card"><h3>Divine intervention (1 per run)</h3><div class=row><select onchange="S.divine=this.value;save();render()">${[['heal','Full heal'],['magnet','Loot magnet'],['speed','Speed boost +50%'],['off','Off']].map(o=>`<option value=${o[0]} ${S.divine==o[0]?'selected':''}>${o[1]}</option>`).join('')}</select>
+ ${S.divine=='heal'?`<span>below <select onchange="S.healAt=+this.value;save()">${[10,20,30,40,50].map(v=>`<option ${S.healAt==v?'selected':''}>${v}</option>`).join('')}</select>% HP</span>`:''}
+ ${S.divine=='magnet'?`<span>on floor <input type=number min=1 max=99 value=${S.magnetFloor} style="width:60px" onchange="S.magnetFloor=+this.value;save()"></span>`:''}</div></div>`;
+ h+=`<div class="card"><h3>Potions (10 gold, carry 3)</h3><div class=row><span>${[0,1,2].map(i=>`<span class="pot ${i<S.potions?'f':''}"></span>`).join('')}</span><button class=b onclick="buyPot()" ${S.potions<3&&S.gold>=10?'':'disabled'}>Buy (10g)</button></div><div class=sm>Each heals 35%. AI drinks at the potion threshold (5% base; 10% at VIT 30, more later).</div></div>`;
+ const bf=[.6,.9,1.2,1.6]; h+=`<div class="card"><h3>Wager challenge bar</h3><div class=sm>Reach the target floor and win the roll. Gambler's Die adds +10 if equipped. Optional stake: an item from your bag (win = upgrade one rarity, lose = item gone).</div>`;
+ BANDS.forEach((b,i)=>{ const fl=Math.max(3,Math.round(Math.max(5,S.best)*bf[i])); const p=Math.min(95,b.p+(S.die?10:0)); const on=S.wager&&S.wager.n==b.n;
+   h+=`<div class=row><span><b>${b.n}</b> ×${b.m} · reach F${fl} · ${p}%</span><button class="b" style="${on?'background:#c58a1a':''}" onclick="setW(${i},${fl})">${on?'Selected':'Pick'}</button></div>`; });
+ h+=`<div class=row><span class=sm>Stake</span><select onchange="if(S.wager){S.wager.stake=this.value||null;save()}" ${S.wager?'':'disabled'}><option value="">none (grant: gold)</option>${S.bag.map(i=>`<option value="${i.id}" ${S.wager&&S.wager.stake==i.id?'selected':''}>${esc(i.n)} (${i.r})</option>`).join('')}</select><button class=b onclick="S.wager=null;save();render()">Clear</button></div></div>`;
+ h+=`<div class="card"><h3>Trinket & options</h3><div class=row><span>Gambler's Die (+10 bars, −25% consolation on a failed wager)</span><input type=checkbox ${S.die?'checked':''} onchange="S.die=this.checked;save();render()"></div>
+ <div class=row><span>Floor-30 re-roll charges: ${S.reroll} bought <span class=sm>(150g, max 2/run; unlock once best ≥ 30)</span></span><button class=b onclick="buyRR()" ${S.best>=30&&S.reroll<2&&S.gold>=150?'':'disabled'}>Buy</button></div>
+ <div class=row><span>Stub: one-handed two-hander (allows off-hand, removes +20%)</span><input type=checkbox ${S.oneHand2H?'checked':''} onchange="S.oneHand2H=this.checked;save();render()"></div></div>`;
+ h+=`<button class="b go" onclick="go()" ${left?'disabled':''}>${left?'Spend all 20 points':'Start run ▶'}</button><p class=sm style="text-align:center"><a href="#" style="color:#777" onclick="if(confirm('Wipe all progress?')){localStorage.removeItem(KEY);location.reload()}">reset lineage</a></p></div>`;
+ return h; }
+function pb(a,d){ S.buy[a]+=d; save(); render(); }
+function buyPot(){ S.gold-=10; S.potions++; save(); render(); }
+function buyRR(){ S.gold-=150; S.reroll++; save(); render(); }
+function setW(i,fl){ const b=BANDS[i]; S.wager={n:b.n,p:b.p,m:b.m,floor:fl,stake:S.wager?S.wager.stake:null}; save(); render(); }
+function gearHTML(){
+ let h=`<div class="sec"><div class="card"><h3>Equipped (10 slots)</h3>`;
+ const mh=S.equip['Main hand'];
+ for(const sl of SLOTS){ const it=S.equip[sl]; const blocked=sl=='Off hand'&&mh&&mh.th&&!S.oneHand2H;
+   h+=`<div class=sm style="margin-top:6px">${sl}${blocked?' — filled by two-hander (+20% dmg)':''}</div>`+itemLine(it,it?`<button class=b onclick="uneq('${sl}')">Unequip</button>`:''); }
+ h+=`</div><div class="card"><h3>Vault (free; returns after next run with +1%/floor reached, cap 60%)</h3>${S.vault.length?S.vault.map(v=>`<div class=sm>• ${esc(v.n)} (from F${v.fl})</div>`).join(''):'<div class=sm>empty</div>'}</div>`;
+ const ord={common:0,uncommon:1,rare:2,epic:3,legendary:4,mythic:5}; const bag=S.bag.slice().sort((a,b)=>ord[b.r]-ord[a.r]||b.fl-a.fl);
+ h+=`<div class="card"><h3>Bag (${S.bag.length}) — organize between runs</h3>`+bag.map(it=>itemLine(it,`<button class=b onclick="eq('${it.id}')">Equip</button><br><button class=b style="margin-top:3px" onclick="vault('${it.id}')">Vault</button>`)).join('')+`</div></div>`; return h; }
+function eq(id){ const it=S.bag.find(i=>i.id==id); let sl=it.slot; if(sl=='Ring') sl=!S.equip['Ring 1']?'Ring 1':!S.equip['Ring 2']?'Ring 2':'Ring 1';
+ S.bag=S.bag.filter(i=>i.id!=id); if(S.equip[sl]) S.bag.push(S.equip[sl]); S.equip[sl]=it; save(); render(); }
+function uneq(sl){ S.bag.push(S.equip[sl]); delete S.equip[sl]; save(); render(); }
+function vault(id){ const it=S.bag.find(i=>i.id==id); S.bag=S.bag.filter(i=>i.id!=id); S.vault.push({n:it.n,fl:it.fl}); save(); render(); }
+function go(){ R=startRun(S); save(); tab='run'; render(); }
+function runHTML(){ if(!R) return `<div class=sec><div class=card>No run yet. Set up on the Setup tab.</div></div>`;
+ return `<div class=sec><div class=row><b id=fr></b><span class=speed>${[1,2,4,8].map(v=>`<button class="b ${speed==v?'on':''}" onclick="speed=${v};render()">${v}x</button>`).join(' ')}</span></div>
+ <canvas id=cv width=480 height=270></canvas>
+ <div class=bar><i id=hpb style="background:#c33"></i><span id=hpt></span></div><div class=bar><i id=mpb style="background:#36c"></i><span id=mpt></span></div>
+ <div class=row><span id=pots></span><span id=rg></span></div><div id=log></div><div id=endb></div></div>`; }
+function drawRun(){ if(!R||tab!='run'||!$('#cv')) return; const c=$('#cv').getContext('2d'), W=480,H=270, b=BIOMES[Math.min(4,Math.floor((R.f-1)/20))];
+ c.fillStyle=b.c; c.fillRect(0,0,W,H); c.fillStyle='rgba(0,0,0,.25)'; for(let x=0;x<W;x+=30)for(let y=150;y<H;y+=30) if((x+y)/30%2) c.fillRect(x,y,30,30);
+ c.fillStyle='#fff'; c.font='bold 14px sans-serif'; c.fillText(`${b.n} · Floor ${R.f} · Room ${Math.min(R.room+1,R.rooms.length)}/${R.rooms.length}: ${(R.cur||'…').toUpperCase()}`,10,20);
+ // room strip
+ R.rooms.forEach((r,i)=>{ c.fillStyle=i<R.room?'#555':i==R.room?'#ffd75e':'#888'; c.fillRect(10+i*28,30,24,8); });
+ // hero
+ const mh=S.equip['Main hand']; c.fillStyle=R.dead?'#555':'#d9c27a'; c.fillRect(70,140,40,60); c.fillStyle=mh?RCOL[mh.r]:'#999'; c.fillRect(112,150,8,40);
+ c.fillStyle='#000'; c.fillText('H',84,175); if(R.fx&&R.fx.t>0){ c.fillStyle=R.fx.crit?'#ffd75e':'#fff'; c.fillText((R.fx.crit?'CRIT ':'')+Math.round(R.fx.dmg),120,135); }
+ if(R.fx2&&R.fx2.t>0){ c.fillStyle='#f73'; c.beginPath(); c.arc(200,165,10,0,7); c.fill(); }
+ if(R.state=='fight') R.enemies.forEach((e,i)=>{ if(e.hp<=0) return; const x=250+i*72,y=125+(i%2)*25, boss=e.n.startsWith('Boss'); const s=boss?70:46;
+   c.fillStyle=boss?'#a22':'#7a4a8a'; c.fillRect(x,y,s,s); c.fillStyle='#000'; c.fillRect(x,y-8,s,5); c.fillStyle='#e33'; c.fillRect(x,y-8,s*e.hp/e.max,5);
+   c.fillStyle='#fff'; c.font='10px sans-serif'; c.fillText(e.n.slice(0,12),x,y+s+12); c.font='bold 14px sans-serif'; });
+ else { c.fillStyle='rgba(255,255,255,.8)'; c.font='28px sans-serif'; c.fillText({trap:'⚠ trap',treasure:'✦ treasure',rest:'☀ rest',event:'? event'}[R.cur]||'',260,180); c.font='bold 14px sans-serif'; }
+ if(R.dead||R.state=='done'){ c.fillStyle='rgba(0,0,0,.6)'; c.fillRect(0,0,W,H); c.fillStyle='#ffd75e'; c.font='bold 26px sans-serif'; c.fillText(R.dead?`Fell on floor ${R.f}`:'Floor 100 cleared!',100,140); c.font='bold 14px sans-serif'; }
+ $('#fr').textContent=`F${R.f} R${Math.min(R.room+1,R.rooms.length)} · ${R.gold} g run gold`;
+ $('#hpb').style.width=(100*R.hp/R.maxHp)+'%'; $('#hpt').textContent=`HP ${Math.ceil(R.hp)}/${R.maxHp}`;
+ $('#mpb').style.width=(100*R.mp/R.maxMp)+'%'; $('#mpt').textContent=`Mana ${Math.floor(R.mp)}/${R.maxMp}`;
+ $('#pots').innerHTML=[0,1,2].map(i=>`<span class="pot ${i<R.pot?'f':''}"></span>`).join('')+` <span class=sm>threshold ${R.th}%</span>`;
+ $('#rg').innerHTML=`<span class=sm>loot ${R.loot.length} · kills ${R.kills}${R.wager?` · wager ${R.wager.n} F${R.wager.floor}${R.wager.done?(R.wager.ok?' ✔':' ✘'):''}`:''}</span>`;
+ const L=$('#log'); const atB=L.scrollTop+L.clientHeight>=L.scrollHeight-20; L.innerHTML=R.log.map(l=>`<div style="color:${l.c||'#bbb'}">F${l.f} · ${esc(l.m)}</div>`).join(''); if(atB) L.scrollTop=L.scrollHeight;
+ if((R.dead||R.state=='done')&&!$('#endb').innerHTML) $('#endb').innerHTML=`<button class="b go" style="margin-top:8px" onclick="tab='lineage';render()">Results & heirs ▶</button>`;
+}
+let last=performance.now();
+function loop(now){ const dt=Math.min(.1,(now-last)/1000); last=now;
+ if(R&&!R.dead&&R.state!='done'){ let g=dt*GS_PER_SEC*speed*(S.divine=='speed'&&!R.divineUsedSpeed?1.5:1); while(g>0){ const d=Math.min(.05,g); step(S,R,d); g-=d; if(R.dead||R.state=='done') break; }
+   if(R.fx) R.fx.t-=dt*speed; if(R.fx2) R.fx2.t-=dt*speed;
+   if(R.dead||R.state=='done'){ endRun(S,R); save(); hdr(); } }
+ if(tab=='run') drawRun(); requestAnimationFrame(loop); }
+function lineageHTML(){ let h=`<div class=sec>`;
+ const L=S.lastRun; if(L) h+=`<div class=card><h3>Last run — Gen ${L.gen}</h3><div>Reached floor <b>${L.floor}</b> in ${L.time} game-sec · ${L.kills} kills · ${L.loot} items · run gold ${L.gold} + consolation ${L.cons}${L.vault?` · ${L.vault} vault item(s) returned`:''}</div>
+ <div class=row style="margin-top:6px"><canvas id=gr width=220 height=220 style="width:180px;background:#0e0c12"></canvas><div style="flex:1;padding-left:8px">This character ended up a<br><b style="font-size:22px;color:#ffd75e">${L.label}</b><div class=sm>Nearest of 13 labels on the class graph (STR top, VIT right, AGI bottom, INT left). Ring = 0.75 heir reach (design aid, not enforced).</div></div></div></div>`;
+ if(S.heirs){ const left=10-Object.values(steer).reduce((a,b)=>a+b,0);
+  h+=`<div class=card><h3>Choose your heir (inherit ${Math.round(S.heirRate*100)}%, INT ×0.875, roll −2…+5)</h3>`+S.heirs.map((x,i)=>`<div class="heir ${heirSel==i?'on':''}" onclick="heirSel=${i};render()"><b>Heir ${i+1}</b> — STR ${x.str} · AGI ${x.agi} · INT ${x.int} · VIT ${x.vit} <span class=sm>(${classLabel(x).label})</span></div>`).join('');
+  h+=`<div class=sm style="margin-top:6px">Lineage steer: ${left} of 10 left (max 4 per stat)</div>`+['str','agi','int','vit'].map(a=>`<div class=row><span>${SN[a]}</span><span><button class=b onclick="st('${a}',-1)" ${steer[a]?'':'disabled'}>−</button> +${steer[a]} <button class=b onclick="st('${a}',1)" ${left&&steer[a]<4?'':'disabled'}>+</button></span></div>`).join('')+
+  `<button class="b go" onclick="takeHeir()">Continue the bloodline ▶</button></div>`; }
+ h+=`<div class=card><h3>Run history</h3>`+(S.runs.map(r=>`<div class=sm>Gen ${r.gen} · F${r.floor} · ${r.label} · +${r.gold+r.cons}g</div>`).join('')||'<div class=sm>none yet</div>')+`</div></div>`; return h; }
+function st(a,d){ steer[a]+=d; render(); }
+function takeHeir(){ chooseHeir(S,heirSel,steer); steer={str:0,agi:0,int:0,vit:0}; heirSel=0; R=null; save(); tab='setup'; render(); }
+function drawGraph(){ const cv=$('#gr'); if(!cv||!S.lastRun) return; const c=cv.getContext('2d'),C=110,Rr=90;
+ c.strokeStyle='#666'; c.beginPath(); c.moveTo(C,C-Rr); c.lineTo(C+Rr,C); c.lineTo(C,C+Rr); c.lineTo(C-Rr,C); c.closePath(); c.stroke();
+ c.font='9px sans-serif'; c.textAlign='center'; for(const L of LABELS){ c.fillStyle='#888'; c.fillText(L[0],C+L[1]*Rr*.92,C+L[2]*Rr*.92+3); }
+ c.fillStyle='#ffd75e'; c.font='bold 10px sans-serif'; c.fillText('STR',C,10); c.fillText('AGI',C,218); c.textAlign='left'; c.fillText('VIT',198,C-8); c.fillText('INT',2,C-8);
+ const x=C+S.lastRun.x*Rr, y=C+S.lastRun.y*Rr; c.strokeStyle='rgba(255,215,94,.4)'; c.beginPath(); c.arc(x,y,Rr*.75,0,7); c.stroke();
+ c.fillStyle='#ff3'; c.beginPath(); c.arc(x,y,5,0,7); c.fill(); }
+if(S.heirs) tab='lineage'; render(); requestAnimationFrame(loop);
+window.onerror=(m)=>{document.title='ERR '+m;};
+if(location.hash.startsWith('#autotest')){ speed=64; let n=0; setInterval(()=>{ try{
+ if(S.heirs&&tab!='run'){ takeHeir(); n++; } else if(S.heirs&&tab=='run'){ tab='lineage'; render(); }
+ else if(!R){ while(used()<20) S.buy[['str','agi','int','vit'][used()%4]]++; S.potions=3; go(); }
+ document.title='OK runs='+n+' best='+S.best+' gen='+S.gen; }catch(e){document.title='ERR '+e.message;} },300); }
+</script></body></html>
